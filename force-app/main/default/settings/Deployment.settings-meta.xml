@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DeploymentSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!--
+      The framework holds seven live scheduled Apex registrations by design, and
+      the platform refuses to redeploy a class those registrations reference.
+      Without this, every deployment would mean disarming and re-arming, which
+      aborts the CronTriggers and loses their fire history.
+    -->
+    <doesSkipAsyncApexValidation>true</doesSkipAsyncApexValidation>
+</DeploymentSettings>

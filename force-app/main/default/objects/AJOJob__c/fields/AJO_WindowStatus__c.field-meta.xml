@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_WindowStatus__c</fullName>
+    <description>Derived: why the job is or is not active right now, and how much of its window is left. Display only.</description>
+    <formula>IF( NOT(AJO_Enabled__c), &quot;Paused&quot;,
+IF( AND( NOT(ISBLANK(AJO_StartDate__c)), AJO_StartDate__c &gt; TODAY() ),
+    &quot;Starts &quot; &amp; TEXT(AJO_StartDate__c),
+IF( AND( NOT(ISBLANK(AJO_EndDate__c)), AJO_EndDate__c &lt; TODAY() ),
+    &quot;Expired &quot; &amp; TEXT(AJO_EndDate__c),
+IF( ISBLANK(AJO_EndDate__c), &quot;Active, no end date&quot;,
+    &quot;Active, &quot; &amp; TEXT(AJO_EndDate__c - TODAY() + 1) &amp; &quot; day(s) left&quot; ))))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Window</label>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+</CustomField>

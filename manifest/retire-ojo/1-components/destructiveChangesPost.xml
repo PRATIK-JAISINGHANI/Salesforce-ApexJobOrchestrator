@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Step 1 of retiring the old Optimus Job Orchestration components, superseded by
+  the AJO module. Apex, tabs, LWC, the app and the permission sets go first,
+  because the three custom objects in step 2 cannot be dropped while Apex still
+  references them.
+
+  Run the OJO framework down before this, or the scheduled classes cannot be
+  deleted:  System.debug(OJOInstaller.disarm());
+
+    sf project deploy start -o <alias> --metadata-dir manifest/retire-ojo/1-components
+-->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>JobOrchestrator</members>
+        <name>CustomApplication</name>
+    </types>
+    <types>
+        <members>OJOJobOrchestratorAdmin</members>
+        <members>OJOJobOrchestratorViewer</members>
+        <name>PermissionSet</name>
+    </types>
+    <types>
+        <members>OJOConsole</members>
+        <members>OJOJob__c</members>
+        <members>OJOJobRun__c</members>
+        <name>CustomTab</name>
+    </types>
+    <types>
+        <members>ojoJobConsole</members>
+        <name>LightningComponentBundle</name>
+    </types>
+    <types>
+        <members>OJOAdminController</members>
+        <members>OJOConfig</members>
+        <members>OJOContext</members>
+        <members>OJOCron</members>
+        <members>OJOCronTest</members>
+        <members>OJODeferredRunner</members>
+        <members>OJODemoBatch</members>
+        <members>OJODemoDualScheduler</members>
+        <members>OJODemoFailingJob</members>
+        <members>OJODemoLegacyScheduler</members>
+        <members>OJODemoQueueable</members>
+        <members>OJODemoRunnable</members>
+        <members>OJODemoSlowJob</members>
+        <members>OJODispatcher</members>
+        <members>OJOFrameworkTest</members>
+        <members>OJOInstaller</members>
+        <members>OJOLauncher</members>
+        <members>OJOLegacyAdapter</members>
+        <members>OJORunLogger</members>
+        <members>OJORunnable</members>
+        <members>OJOThrottle</members>
+        <members>OJOWatchdog</members>
+        <name>ApexClass</name>
+    </types>
+    <version>67.0</version>
+</Package>

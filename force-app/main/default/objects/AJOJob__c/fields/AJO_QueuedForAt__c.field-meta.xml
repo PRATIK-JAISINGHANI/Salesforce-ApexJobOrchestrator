@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_QueuedForAt__c</fullName>
+    <description>The exact instant a deferred run is waiting for. Set when a heartbeat hands the job to AJODeferredRunner, cleared when that run lands. Without it the console cannot distinguish "not due yet" from "already queued and about to run", because the heartbeat advances Next Run past the instant it just queued.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set while a run is queued and waiting for its exact minute. Blank at rest.</inlineHelpText>
+    <label>Queued For</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

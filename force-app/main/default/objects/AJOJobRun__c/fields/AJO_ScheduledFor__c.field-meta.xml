@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_ScheduledFor__c</fullName>
+    <description>The instant the schedule said this run was due, as opposed to when it actually started.</description>
+    <label>Scheduled For</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

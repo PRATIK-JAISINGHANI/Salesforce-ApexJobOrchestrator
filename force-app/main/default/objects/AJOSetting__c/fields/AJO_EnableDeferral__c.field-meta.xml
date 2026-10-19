@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_EnableDeferral__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>When true the launcher defers a job with a delayed queueable to hit its exact minute.</description>
+    <label>Enable Minute Deferral</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

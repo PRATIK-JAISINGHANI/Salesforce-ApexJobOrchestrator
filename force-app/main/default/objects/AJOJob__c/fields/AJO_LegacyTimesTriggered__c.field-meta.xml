@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_LegacyTimesTriggered__c</fullName>
+    <description>How many times the Setup schedule had fired when it was converted. Lost with the CronTrigger otherwise, and it is what tells a long-running job apart from one that never ran at all.</description>
+    <externalId>false</externalId>
+    <label>Runs Before Conversion</label>
+    <precision>9</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,767 @@
+<template>
+  <lightning-card icon-name="utility:clock">
+    <h1 slot="title" class="slds-text-heading_small">Apex Job Orchestration</h1>
+
+    <div slot="actions" class="actions">
+      <lightning-button label="Refresh" icon-name="utility:refresh"
+                        onclick={loadAll}></lightning-button>
+      <lightning-button label="New job" variant="brand" icon-name="utility:add"
+                        onclick={openNew}></lightning-button>
+      <template if:true={isAdmin}>
+        <lightning-button label="Convert Existing Apex Job" icon-name="utility:download"
+                          onclick={openConvert}></lightning-button>
+        <lightning-button label={pauseLabel} variant={pauseVariant}
+                          icon-name="utility:pause" onclick={togglePause}></lightning-button>
+      </template>
+    </div>
+
+    <!-- ------------------------------------------------ one sentence, up top -->
+    <div class="slds-p-horizontal_medium slds-p-bottom_small">
+      <template if:true={health}>
+        <div class={bannerClass}>
+          <lightning-icon icon-name={bannerIcon} size="x-small" variant={bannerVariant}
+                          alternative-text="Status"></lightning-icon>
+          <span class="slds-m-left_x-small">{health.statusHeadline}</span>
+        </div>
+
+        <div class="strip slds-m-top_small">
+          <div class="tile">
+            <span class="n">{health.jobsActive}</span>
+            <span class="l">jobs switched on, of {health.jobsTotal} set up</span>
+          </div>
+          <div class="tile">
+            <span class="n">{nextCheckLabel}</span>
+            <span class="l">next scheduled check — jobs are looked at every
+              {health.heartbeatMinutes} minutes</span>
+          </div>
+          <div class="tile">
+            <span class="n">{failuresLabel}</span>
+            <span class="l">runs failed in the last 24 hours</span>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+      <lightning-tabset>
+
+        <!-- =========================================== 1. what runs next -->
+        <lightning-tab label={dueTabLabel} value="due">
+          <template if:true={nextCheck}>
+            <p class="lede slds-m-bottom_small">{nextCheckHeadline}</p>
+            <template if:true={nextCheck.due.length}>
+              <lightning-datatable
+                  key-field="id"
+                  data={nextCheck.due}
+                  columns={dueColumns}
+                  hide-checkbox-column>
+              </lightning-datatable>
+            </template>
+            <template if:false={nextCheck.due.length}>
+              <div class="empty">Nothing is due at the next check.</div>
+            </template>
+          </template>
+        </lightning-tab>
+
+        <!-- ================================================= 2. activity -->
+        <lightning-tab label="Activity" value="activity">
+          <p class="lede slds-m-bottom_small">{activityLede}</p>
+
+          <!-- One control row, same shape as every other tab's, instead of a
+               heading on the left and a dropdown floated off to the right. -->
+          <div class="actions slds-m-bottom_small">
+            <lightning-button label="Everything" data-filter="all"
+                              variant={filterAllVariant} onclick={handleFilter}>
+            </lightning-button>
+            <lightning-button label="Errors only" data-filter="failures"
+                              variant={filterFailVariant} onclick={handleFilter}>
+            </lightning-button>
+            <lightning-button label="Last 24 hours" data-filter="today"
+                              variant={filterTodayVariant} onclick={handleFilter}>
+            </lightning-button>
+
+            <!-- Only worth showing once more than one check has actually run
+                 something; with a single slot it filters to exactly what is
+                 already on screen. -->
+            <template if:true={showSlotFilter}>
+              <div class="slot-picker">
+                <lightning-combobox variant="label-hidden" value={activitySlot}
+                                    options={slotOptions} onchange={handleSlotChange}>
+                </lightning-combobox>
+              </div>
+            </template>
+
+            <template if:true={selectedJobId}>
+              <lightning-button label="Clear job filter" variant="base"
+                                icon-name="utility:close" onclick={clearJobFilter}>
+              </lightning-button>
+            </template>
+          </div>
+
+          <lightning-datatable
+              key-field="id"
+              data={activity}
+              columns={activityColumns}
+              hide-checkbox-column>
+          </lightning-datatable>
+          <template if:false={activity.length}>
+            <div class="empty">Nothing matches that filter.</div>
+          </template>
+        </lightning-tab>
+
+        <!-- =================================================== 3. errors -->
+        <lightning-tab label={problemsTabLabel} value="errors">
+          <template if:true={problems.length}>
+            <p class="lede slds-m-bottom_small">
+              Every run that failed or timed out. Choose
+              <strong>What went wrong</strong> on a row for the full error and stack trace.
+            </p>
+            <lightning-datatable
+                key-field="id"
+                data={problems}
+                columns={problemColumns}
+                hide-checkbox-column
+                onrowaction={handleProblemAction}>
+            </lightning-datatable>
+          </template>
+          <template if:false={problems.length}>
+            <div class="empty">No job has failed. Nothing to look at here.</div>
+          </template>
+        </lightning-tab>
+
+        <!-- ===================================================== 4. jobs -->
+        <lightning-tab label="Jobs" value="jobs">
+          <p class="lede slds-m-bottom_small">
+            Every job configured here, what it runs and when. The arrow at the end of a
+            row runs it now, pauses it, opens its activity, or puts it back into Setup.
+          </p>
+          <lightning-datatable
+              key-field="id"
+              data={jobs}
+              columns={jobColumns}
+              hide-checkbox-column
+              onrowaction={handleJobAction}>
+          </lightning-datatable>
+          <template if:false={jobs.length}>
+            <div class="empty">
+              No jobs are set up yet. Choose <strong>New job</strong> to add one.
+              <template if:true={isAdmin}>
+                <div class="slds-m-top_small">
+                  <lightning-button label="Create demo jobs" variant="brand-outline"
+                                    onclick={seedDemo}></lightning-button>
+                </div>
+              </template>
+            </div>
+          </template>
+        </lightning-tab>
+
+        <!-- ==================================================== 5. setup -->
+        <template if:true={isAdmin}>
+          <lightning-tab label="Setup" value="setup">
+            <p class="lede slds-m-bottom_small">
+              One-time setup and housekeeping. Day to day, nothing on this tab needs touching.
+            </p>
+
+            <div class="setup-row">
+              <div class="setup-item">
+                <h3>Install the scheduler</h3>
+                <p>Registers the {health.heartbeatsExpected} scheduled checks and the nightly
+                   tidy-up. Until this is done, no job runs at all. Safe to repeat — it only
+                   creates what is missing.</p>
+                <lightning-button label="Install" icon-name="utility:play"
+                                  onclick={install} disabled={busy}></lightning-button>
+              </div>
+
+              <div class="setup-item">
+                <h3>Run the tidy-up now</h3>
+                <p>Closes out batches that have finished, marks runs that overran as timed out,
+                   retires jobs past their end date, trims the old log rows, and puts back any
+                   scheduled check that went missing. This happens on its own every night.</p>
+                <lightning-button label="Run maintenance" icon-name="utility:refresh"
+                                  onclick={runMaintenance} disabled={busy}></lightning-button>
+              </div>
+
+              <div class="setup-item setup-item_danger">
+                <h3>Uninstall the scheduler</h3>
+                <p>Removes all {health.slotsUsedByFramework} scheduled registrations.
+                   <strong>Every job stops running</strong> until the scheduler is installed
+                   again, and each entry loses its history of past runs. To stop jobs
+                   temporarily, use <strong>Pause all jobs</strong> instead.</p>
+                <lightning-button label="Uninstall…" variant="destructive"
+                                  onclick={askUninstall} disabled={busy}></lightning-button>
+              </div>
+            </div>
+
+            <h3 class="slds-text-title_caps slds-m-top_large slds-m-bottom_x-small">
+              Salesforce scheduled-job slots
+            </h3>
+            <div class="strip">
+              <div class={slotTileClass}>
+                <span class="n">{health.slotsUsed}</span>
+                <span class="l">of {health.slotLimit} scheduled-job slots used across the
+                  whole org</span>
+                <div class={slotMeterClass}><span style={slotBarStyle}></span></div>
+              </div>
+              <div class="tile ok">
+                <span class="n">{health.slotsUsedByFramework}</span>
+                <span class="l">held by this framework, however many jobs it carries —
+                  {health.heartbeatsArmed} of {health.heartbeatsExpected} checks plus the
+                  nightly tidy-up</span>
+              </div>
+              <div class="tile">
+                <span class="n">{batchLabel}</span>
+                <span class="l">batch jobs running against the platform's ceiling</span>
+              </div>
+              <div class="tile">
+                <span class="n">{health.runLogRows}</span>
+                <span class="l">rows in the run log</span>
+              </div>
+            </div>
+
+            <template if:true={health.triggers.length}>
+              <h3 class="slds-text-title_caps slds-m-top_large slds-m-bottom_x-small">
+                Registered entries
+              </h3>
+              <div class="table-scroll">
+                <table class="slds-table slds-table_bordered entries">
+                  <thead>
+                    <tr>
+                      <th scope="col">Entry</th>
+                      <th scope="col">Does</th>
+                      <th scope="col">Schedule</th>
+                      <th scope="col">State</th>
+                      <th scope="col">Next run</th>
+                      <th scope="col" class="num">Times run</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template for:each={registeredEntries} for:item="t">
+                      <tr key={t.name} class="slds-hint-parent">
+                        <th scope="row">{t.name}</th>
+                        <td>{t.kind}</td>
+                        <td class="mono">{t.cronExpression}</td>
+                        <td><span class={t.stateClass}>{t.state}</span></td>
+                        <td>{t.nextFireText}</td>
+                        <td class="num">{t.timesTriggered}</td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </lightning-tab>
+        </template>
+
+      </lightning-tabset>
+    </div>
+  </lightning-card>
+
+  <!-- ------------------------------------------------ what went wrong modal -->
+  <template if:true={showDetail}>
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+      <div class="slds-modal__container">
+        <header class="slds-modal__header">
+          <lightning-button-icon icon-name="utility:close" variant="bare-inverse"
+              class="slds-modal__close" onclick={closeDetail} alternative-text="Close">
+          </lightning-button-icon>
+          <h2 class="slds-modal__title">{detailTitle}</h2>
+        </header>
+        <div class="slds-modal__content slds-p-around_medium">
+          <dl class="detail-list">
+            <dt>Result</dt><dd>{detailRow.statusLabel}</dd>
+            <dt>Started</dt><dd>{detailRow.startedAtText}</dd>
+            <dt>Finished</dt><dd>{detailRow.finishedAtText}</dd>
+            <dt>Seconds</dt><dd>{detailRow.durationSec}</dd>
+            <dt>Items processed</dt><dd>{detailRow.itemsProcessed}</dd>
+            <dt>Items failed</dt><dd>{detailRow.itemsFailed}</dd>
+            <dt>Records per batch</dt><dd>{detailRow.batchSize}</dd>
+            <dt>Scheduled check</dt><dd>{detailRow.slotLabel}</dd>
+            <dt>Started by</dt><dd>{detailRow.triggeredBy}</dd>
+            <dt>Platform job id</dt><dd>{detailRow.asyncApexJobId}</dd>
+          </dl>
+          <template if:true={detailRow.errorMessage}>
+            <h3 class="slds-form-element__label slds-m-top_medium">Error</h3>
+            <div class="preview">{detailRow.errorMessage}</div>
+          </template>
+          <template if:true={detailRow.stackTrace}>
+            <h3 class="slds-form-element__label slds-m-top_medium">Stack trace</h3>
+            <div class="preview">{detailRow.stackTrace}</div>
+          </template>
+        </div>
+        <footer class="slds-modal__footer">
+          <lightning-button label="Close" onclick={closeDetail}></lightning-button>
+        </footer>
+      </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+  </template>
+
+  <!-- ------------------------------------------------- uninstall confirmation -->
+  <template if:true={showUninstall}>
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+      <div class="slds-modal__container">
+        <header class="slds-modal__header">
+          <lightning-button-icon icon-name="utility:close" variant="bare-inverse"
+              class="slds-modal__close" onclick={closeUninstall} alternative-text="Close">
+          </lightning-button-icon>
+          <h2 class="slds-modal__title">Uninstall the scheduler?</h2>
+        </header>
+        <div class="slds-modal__content slds-p-around_medium">
+          <p class="slds-m-bottom_small">
+            Every configured job stops running immediately and stays stopped until the
+            scheduler is installed again. Each registration also loses its record of past
+            fire times. If you only want to stop jobs for a while, close this and use
+            <strong>Pause all jobs</strong> instead.
+          </p>
+          <lightning-input label="Type UNINSTALL to confirm" value={uninstallConfirm}
+                           onchange={handleUninstallConfirm}></lightning-input>
+        </div>
+        <footer class="slds-modal__footer">
+          <lightning-button label="Cancel" onclick={closeUninstall}></lightning-button>
+          <lightning-button label="Uninstall" variant="destructive"
+                            class="slds-m-left_x-small" onclick={uninstall}
+                            disabled={uninstallBlocked}></lightning-button>
+        </footer>
+      </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+  </template>
+
+  <!-- ------------------------------------------- convert from Setup -->
+  <template if:true={showConvert}>
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large">
+      <div class="slds-modal__container">
+        <header class="slds-modal__header">
+          <lightning-button-icon icon-name="utility:close" variant="bare-inverse"
+              class="slds-modal__close" onclick={closeConvert} alternative-text="Close">
+          </lightning-button-icon>
+          <h2 class="slds-modal__title">Convert an existing Apex job</h2>
+          <p class="slds-text-body_small slds-m-top_xx-small">{convertHeadline}</p>
+        </header>
+
+        <div class="slds-modal__content slds-p-around_medium conv-body">
+          <template if:true={hasResults}>
+            <div class="conv-results slds-m-bottom_medium">
+              <h3 class="slds-text-heading_small slds-m-bottom_x-small">Results</h3>
+              <template for:each={convertResults} for:item="r">
+                <div key={r.cronTriggerId} class={r.resultClass}>
+                  <strong>{r.name}</strong> — {r.verdict}. {r.detail}
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <template if:true={convertible.length}>
+            <div class="conv-bar">
+              <lightning-button label="Select all that can convert" variant="base"
+                                onclick={selectAllConvertible}></lightning-button>
+              <template if:true={hasSelection}>
+                <lightning-button label="Clear selection" variant="base"
+                                  onclick={clearSelection}></lightning-button>
+              </template>
+            </div>
+          </template>
+
+          <template for:each={convertible} for:item="c">
+            <div key={c.cronTriggerId} class={c.rowClass}>
+              <div class="conv-main">
+                <div class="conv-head">
+                  <strong>{c.name}</strong>
+                  <span class="conv-state">{c.state}</span>
+                </div>
+                <div class="conv-facts">
+                  <span><em>Runs</em> {c.classText}</span>
+                  <span><em>Schedule</em> {c.schedule}</span>
+                  <span><em>Time zone</em> {c.timeZone}</span>
+                  <span><em>Last run</em> {c.lastRunText}</span>
+                  <span><em>Next run</em> {c.nextRunText}</span>
+                  <span><em>Runs so far</em> {c.runsText}</span>
+                  <span class="mono">{c.cronExpression}</span>
+                </div>
+
+                <template if:true={c.hasBlockers}>
+                  <div class="conv-why conv-why_block">
+                    <template for:each={c.blockers} for:item="b">
+                      <div key={b}>Cannot convert — {b}</div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+
+              <div class="conv-pick">
+                <template if:true={c.selectable}>
+                  <lightning-input type="checkbox" label="Convert" variant="label-hidden"
+                                   checked={c.picked} data-id={c.cronTriggerId}
+                                   onchange={handleConvertCheck}></lightning-input>
+                </template>
+                <template if:false={c.selectable}>
+                  <span class="conv-blocked-tag">Blocked</span>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <template if:true={hasSelection}>
+            <template if:false={showSinglePanel}>
+              <div class="conv-selected conv-bulk">{bulkNote}</div>
+            </template>
+          </template>
+
+          <template if:true={showSinglePanel}>
+            <div class="conv-selected">
+              <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+                Converting: {convertPick.name}
+              </h3>
+
+              <div class="slds-grid slds-wrap slds-gutters_x-small">
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Job name" value={convertPick.newName}
+                                   data-field="newName" onchange={handleConvertField}>
+                  </lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Reference key" value={convertPick.newKey}
+                                   data-field="newKey" onchange={handleConvertField}>
+                  </lightning-input>
+                </div>
+
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Apex class" value={convertPick.classText}
+                                   read-only></lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="How it runs" value={convertPick.executionType}
+                                   read-only></lightning-input>
+                </div>
+
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Schedule" value={convertPick.schedule}
+                                   read-only></lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Cron expression" value={convertPick.cronExpression}
+                                   read-only></lightning-input>
+                </div>
+
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Time zone" value={convertPick.timeZone}
+                                   read-only></lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Runs so far in Setup" value={convertPick.runsText}
+                                   read-only></lightning-input>
+                </div>
+
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Last run" value={convertPick.lastRunText}
+                                   read-only></lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input label="Next run in Setup" value={convertPick.nextRunText}
+                                   read-only></lightning-input>
+                </div>
+
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input type="number" label="Records per batch"
+                                   value={convertPick.newBatchSize}
+                                   data-field="newBatchSize" onchange={handleConvertField}
+                                   field-level-help="Only used when the class runs as a Batch. Leave blank for 200.">
+                  </lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                  <lightning-input type="number" label="Order"
+                                   value={convertPick.newPriority}
+                                   data-field="newPriority" onchange={handleConvertField}
+                                   field-level-help="1 goes first when several jobs are due at once.">
+                  </lightning-input>
+                </div>
+              </div>
+
+              <div class="slds-m-top_small">
+                <span class="slds-form-element__label">
+                  When the orchestrator would run it, in {convertPick.timeZone}
+                </span>
+                <div class="preview">{convertPreviewText}</div>
+                <p class="slds-text-body_small slds-m-top_xx-small">
+                  Setup currently says the next run is
+                  <strong>{convertPick.nextRunText}</strong>. If the first line above does
+                  not match, stop — the time zone or the schedule has not been read the way
+                  Setup reads it.
+                </p>
+              </div>
+
+              <template if:true={convertPick.hasWarnings}>
+                <div class="conv-why conv-why_warn slds-m-top_small">
+                  <template for:each={convertPick.warnings} for:item="w">
+                    <div key={w}>{w}</div>
+                  </template>
+                </div>
+              </template>
+
+              <div class="conv-testmode slds-m-top_small">
+                <strong>It will be created in Test mode.</strong>
+                It records what it would have done, at the right minute, and runs nothing.
+                Watch one cycle, then turn Test mode off on the job to make it live.
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <footer class="slds-modal__footer">
+          <lightning-button label="Cancel" onclick={closeConvert}></lightning-button>
+          <lightning-button label={convertButtonLabel} variant="destructive"
+                            class="slds-m-left_x-small" onclick={saveConvert}
+                            disabled={convertDisabled}></lightning-button>
+        </footer>
+      </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+  </template>
+
+  <!-- ------------------------------------------------ restore to Setup -->
+  <template if:true={showRestore}>
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+      <div class="slds-modal__container">
+        <header class="slds-modal__header">
+          <lightning-button-icon icon-name="utility:close" variant="bare-inverse"
+              class="slds-modal__close" onclick={closeRestore} alternative-text="Close">
+          </lightning-button-icon>
+          <h2 class="slds-modal__title">Put "{restorePlan.legacyName}" back into Setup</h2>
+        </header>
+
+        <div class="slds-modal__content slds-p-around_medium">
+          <p class="lede slds-m-bottom_small">
+            This re-creates the scheduled job in Setup and switches
+            <strong>{restorePlan.jobName}</strong> off here, so only one of them runs.
+            It takes back one of the org's 100 scheduled slots.
+          </p>
+
+          <dl class="detail-list">
+            <dt>Setup job name</dt><dd>{restorePlan.legacyName}</dd>
+            <dt>Schedule</dt><dd class="mono">{restorePlan.legacyCron}</dd>
+            <dt>Originally scheduled in</dt><dd>{restorePlan.originalTimeZone}</dd>
+            <dt>Your time zone</dt><dd>{restorePlan.yourTimeZone}</dd>
+          </dl>
+
+          <template if:true={restoreHasBlockers}>
+            <div class="conv-why conv-why_block slds-m-top_small">
+              <template for:each={restorePlan.blockers} for:item="b">
+                <div key={b}>{b}</div>
+              </template>
+            </div>
+          </template>
+
+          <template if:true={restoreZoneDiffers}>
+            <div class="conv-why conv-why_warn slds-m-top_small">
+              Setup can only schedule in <strong>your own</strong> time zone, and yours is not
+              the one this job was captured in. Restoring now changes when it runs.
+            </div>
+            <div class="slds-grid slds-gutters_x-small slds-m-top_small">
+              <div class="slds-col slds-size_1-of-2">
+                <span class="slds-form-element__label">
+                  As captured, in {restorePlan.originalTimeZone}
+                </span>
+                <div class="preview">{originalFireText}</div>
+              </div>
+              <div class="slds-col slds-size_1-of-2">
+                <span class="slds-form-element__label">
+                  As it would run, in {restorePlan.yourTimeZone}
+                </span>
+                <div class="preview">{restoredFireText}</div>
+              </div>
+            </div>
+            <lightning-input type="checkbox" class="slds-m-top_small"
+                             label="I accept that this changes when the job runs"
+                             checked={acceptShift} onchange={handleAcceptShift}>
+            </lightning-input>
+          </template>
+
+          <template if:false={restoreZoneDiffers}>
+            <div class="slds-m-top_small">
+              <span class="slds-form-element__label">When it will run</span>
+              <div class="preview">{originalFireText}</div>
+            </div>
+          </template>
+        </div>
+
+        <footer class="slds-modal__footer">
+          <lightning-button label="Cancel" onclick={closeRestore}></lightning-button>
+          <lightning-button label="Restore to Setup" variant="brand"
+                            class="slds-m-left_x-small" onclick={doRestore}
+                            disabled={restoreBlocked}></lightning-button>
+        </footer>
+      </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+  </template>
+
+  <!-- ------------------------------------------------------------- editor -->
+  <template if:true={showEditor}>
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+      <div class="slds-modal__container">
+        <header class="slds-modal__header">
+          <lightning-button-icon icon-name="utility:close" variant="bare-inverse"
+              class="slds-modal__close" onclick={closeEditor} alternative-text="Close">
+          </lightning-button-icon>
+          <h2 class="slds-modal__title">{editorTitle}</h2>
+        </header>
+
+        <div class="slds-modal__content slds-p-around_medium">
+          <div class="slds-grid slds-wrap slds-gutters_x-small">
+            <div class="slds-col slds-size_1-of-2">
+              <lightning-input label="Job name" value={draft.name}
+                               data-field="name" onchange={handleDraftChange} required>
+              </lightning-input>
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+              <lightning-input label="Reference key" value={draft.jobKey}
+                               data-field="jobKey" onchange={handleDraftChange}
+                               field-level-help="A stable name used by deployments and migration. Leave it alone once set.">
+              </lightning-input>
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+              <lightning-input label="Apex class to run" value={draft.apexClass}
+                               data-field="apexClass" onchange={handleClassChange} required>
+              </lightning-input>
+              <template if:true={classHint}>
+                <p class="slds-text-body_small slds-m-top_xx-small" data-hint={classHintOk}>
+                  {classHint}
+                </p>
+              </template>
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+              <lightning-combobox label="How it runs" value={draft.executionType}
+                                  options={executionTypes} data-field="executionType"
+                                  onchange={handleDraftChange}>
+              </lightning-combobox>
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+              <lightning-input label="Schedule" value={draft.cronExpression}
+                               data-field="cronExpression" onchange={handleCronChange} required
+                               field-level-help="Cron: Seconds Minutes Hours Day-of-month Month Day-of-week">
+              </lightning-input>
+              <template if:true={cronDescription}>
+                <p class="desc slds-m-top_xx-small">{cronDescription}</p>
+              </template>
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+              <lightning-input label="Time zone" value={draft.timeZone}
+                               data-field="timeZone" onchange={handleCronChange}>
+              </lightning-input>
+            </div>
+
+            <div class="slds-col slds-size_1-of-1 slds-m-top_x-small">
+              <span class="slds-form-element__label">The next five times it would run</span>
+              <div class="preview">{previewText}</div>
+            </div>
+
+            <div class="slds-col slds-size_1-of-1 slds-m-top_x-small">
+              <div class="window-box">
+                <span class="slds-form-element__label">When it may run</span>
+                <div class="slds-grid slds-wrap slds-gutters_x-small">
+                  <div class="slds-col slds-size_1-of-3">
+                    <lightning-input type="date" label="First day" value={draft.startDate}
+                                     data-field="startDate" onchange={handleWindowChange}
+                                     field-level-help="Leave blank to start straight away.">
+                    </lightning-input>
+                  </div>
+                  <div class="slds-col slds-size_1-of-3">
+                    <lightning-input type="date" label="Last day" value={draft.endDate}
+                                     data-field="endDate" onchange={handleWindowChange}
+                                     field-level-help="Inclusive. Leave blank to run indefinitely.">
+                    </lightning-input>
+                  </div>
+                  <div class="slds-col slds-size_1-of-3 slds-p-top_large">
+                    <lightning-input type="toggle" label="Switched on" checked={draft.enabled}
+                                     data-field="enabled" onchange={handleDraftToggle}
+                                     message-toggle-active="On" message-toggle-inactive="Paused">
+                    </lightning-input>
+                  </div>
+                </div>
+                <p class="desc slds-m-top_xx-small">{windowHint}</p>
+              </div>
+            </div>
+
+            <div class="slds-col slds-size_1-of-1">
+              <lightning-combobox label="If the last run is still going"
+                                  value={draft.overlapPolicy}
+                                  options={overlapPolicies} data-field="overlapPolicy"
+                                  onchange={handleDraftChange}>
+              </lightning-combobox>
+            </div>
+
+            <div class="slds-col slds-size_1-of-4">
+              <lightning-input type="number" label="Order" value={draft.priority}
+                               data-field="priority" onchange={handleDraftChange}
+                               field-level-help="1 goes first. Decides who gets a batch slot when several jobs are due at once.">
+              </lightning-input>
+            </div>
+            <div class="slds-col slds-size_1-of-4">
+              <lightning-input type="number" label="Records per batch" value={draft.batchSize}
+                               data-field="batchSize" onchange={handleDraftChange}>
+              </lightning-input>
+            </div>
+            <div class="slds-col slds-size_1-of-4">
+              <lightning-input type="number" label="Give up after (minutes)"
+                               value={draft.maxRuntimeMinutes}
+                               data-field="maxRuntimeMinutes" onchange={handleDraftChange}
+                               field-level-help="A run still going after this is marked timed out and the job is freed.">
+              </lightning-input>
+            </div>
+            <div class="slds-col slds-size_1-of-4">
+              <lightning-input type="number" label="Switch off after N failures"
+                               value={draft.maxConsecutiveFailures}
+                               data-field="maxConsecutiveFailures" onchange={handleDraftChange}
+                               field-level-help="Consecutive failures before the job stops trying, so it does not fail forever.">
+              </lightning-input>
+            </div>
+
+            <div class="slds-col slds-size_1-of-2">
+              <lightning-input type="checkbox" label="Test mode" checked={draft.dryRun}
+                               data-field="dryRun" onchange={handleDraftToggle}
+                               field-level-help="Records what it would have done and runs nothing. Use this to prove a schedule before letting it loose.">
+              </lightning-input>
+            </div>
+            <div class="slds-col slds-size_1-of-2">
+              <lightning-input type="checkbox" label="Must start on its exact minute"
+                               checked={draft.pinned} data-field="pinned"
+                               onchange={handleDraftToggle}
+                               field-level-help="Costs one of the org's 100 scheduled-job slots. Only for jobs where the minute is contractual.">
+              </lightning-input>
+            </div>
+
+            <div class="slds-col slds-size_1-of-1">
+              <lightning-textarea label="Settings passed to the job (JSON)"
+                                  value={draft.parameters}
+                                  data-field="parameters" onchange={handleDraftChange}
+                                  field-level-help="Lets one Apex class back several jobs with different configuration.">
+              </lightning-textarea>
+            </div>
+            <div class="slds-col slds-size_1-of-1">
+              <lightning-textarea label="Notes" value={draft.description}
+                                  data-field="description" onchange={handleDraftChange}>
+              </lightning-textarea>
+            </div>
+          </div>
+        </div>
+
+        <footer class="slds-modal__footer slds-grid slds-grid_align-spread">
+          <div>
+            <template if:true={draft.id}>
+              <lightning-button label="Delete this job" variant="destructive-text"
+                                onclick={deleteDraft} disabled={saving}></lightning-button>
+            </template>
+          </div>
+          <div>
+            <lightning-button label="Cancel" onclick={closeEditor}></lightning-button>
+            <lightning-button label="Save" variant="brand" onclick={saveDraft}
+                              class="slds-m-left_x-small" disabled={saving}></lightning-button>
+          </div>
+        </footer>
+      </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+  </template>
+</template>

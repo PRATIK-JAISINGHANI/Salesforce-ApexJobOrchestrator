@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_StartDate__c</fullName>
+    <defaultValue>TODAY()</defaultValue>
+    <description>First day the job is allowed to run. Blank means it may run as soon as it is enabled.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>First day this job may run. Leave blank to start immediately.</inlineHelpText>
+    <label>Start Date</label>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

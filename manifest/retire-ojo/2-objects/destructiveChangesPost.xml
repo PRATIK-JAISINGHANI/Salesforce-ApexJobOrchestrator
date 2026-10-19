@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Step 2, and the irreversible one. Dropping these objects destroys their data:
+  8 OJOJob__c configuration records and roughly 1,000 OJOJobRun__c log rows.
+  The configuration has already been migrated to AJOJob__c and AJOSetting__c;
+  the run log has not, because it is retention-managed transient data.
+
+  Export it first if any of it is wanted:
+    sf data query -o <alias> -r csv \
+      -q "SELECT Id, Name, Job__r.JobKey__c, Status__c, StartedAt__c, FinishedAt__c, \
+                 DurationSec__c, ItemsProcessed__c, TriggeredBy__c, Message__c, \
+                 ErrorMessage__c FROM OJOJobRun__c" > ojo-run-log.csv
+
+    sf project deploy start -o <alias> --metadata-dir manifest/retire-ojo/2-objects
+-->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>OJOJobRun__c</members>
+        <members>OJOJob__c</members>
+        <members>OJOSetting__c</members>
+        <name>CustomObject</name>
+    </types>
+    <version>67.0</version>
+</Package>

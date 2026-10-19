@@ -1,0 +1,352 @@
+/* ---------------------------------------------------------------- header */
+
+.banner {
+    display: flex;
+    align-items: center;
+    border-radius: 0.35rem;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    border-left: 4px solid #2e844a;
+    background: #ebf7ee;
+    color: #1b4d2b;
+}
+.banner_warning {
+    border-left-color: #8c4b02;
+    background: #fef5e7;
+    color: #6b3a02;
+}
+.banner_error {
+    border-left-color: #ba0517;
+    background: #fdecee;
+    color: #8a0a16;
+}
+
+/*
+  Buttons. `slds-button-group` styles direct <button> children into a segmented
+  control; with lightning-button wrappers in between it matches nothing and the
+  buttons render flush against each other. A flex row with a gap is what was
+  actually wanted here.
+*/
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0.75rem;
+}
+.tile {
+    background: var(--slds-g-color-neutral-base-100, #fff);
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: 0.35rem;
+    padding: 0.75rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+.tile .n {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    color: #0176d3;
+    word-break: break-word;
+}
+.tile.hot .n { color: #ba0517; }
+.tile.warn .n { color: #8c4b02; }
+.tile.ok .n { color: #2e844a; }
+.tile .l {
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: #5c5c5c;
+}
+.meter {
+    height: 6px;
+    border-radius: 3px;
+    background: #e5e5e5;
+    overflow: hidden;
+    margin-top: 0.35rem;
+}
+.meter > span {
+    display: block;
+    height: 100%;
+    background: #0176d3;
+    border-radius: 3px;
+}
+.meter.hot > span { background: #ba0517; }
+.meter.ok > span { background: #2e844a; }
+
+/* ------------------------------------------------------------- tab bodies */
+
+.lede {
+    font-size: 0.85rem;
+    color: #5c5c5c;
+    line-height: 1.45;
+    max-width: 62rem;
+}
+.empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #5c5c5c;
+    font-size: 0.9rem;
+}
+/* Sized to sit inline with the filter buttons, not beside them. */
+.slot-picker { min-width: 13.5rem; }
+
+/* Column colouring, shared by the activity, errors and jobs tables. */
+.ok-text   { color: #2e844a; }
+.warn-text { color: #8c4b02; font-weight: 600; }
+.err-text  { color: #ba0517; font-weight: 600; }
+.win-soon  { color: #8c4b02; font-weight: 600; }
+
+/* ------------------------------------------------------------------ setup */
+
+/* The registered CronTrigger entries. */
+.table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: 0.35rem;
+}
+.entries {
+    font-size: 0.8rem;
+    /*
+      Auto layout, not slds-table_fixed-layout: six equal columns would clip
+      "AJO Heartbeat 00" and the fire times. The cells never wrap, and the
+      wrapper scrolls if the viewport is too narrow for them.
+    */
+    width: 100%;
+}
+.entries th,
+.entries td {
+    white-space: nowrap;
+}
+.entries thead th {
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #5c5c5c;
+    background: #f3f3f3;
+    padding: 0.4rem 0.75rem;
+}
+.entries tbody th,
+.entries tbody td {
+    padding: 0.45rem 0.75rem;
+    vertical-align: middle;
+}
+.entries tbody th {
+    font-weight: 600;
+}
+.entries .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.entries .mono {
+    font-family: monospace;
+    font-size: 0.78rem;
+}
+
+
+.setup-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: 0.75rem;
+}
+.setup-item {
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-radius: 0.35rem;
+    padding: 0.85rem 1rem 1rem;
+    background: var(--slds-g-color-neutral-base-100, #fff);
+    display: flex;
+    flex-direction: column;
+}
+.setup-item h3 {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+}
+.setup-item p {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #5c5c5c;
+    margin-bottom: 0.75rem;
+    flex: 1 1 auto;
+}
+.setup-item_danger {
+    border-left: 3px solid #ba0517;
+    background: #fffbfb;
+}
+
+/* ------------------------------------------------------- forms and details */
+
+.preview {
+    font-family: monospace;
+    font-size: 0.78rem;
+    line-height: 1.7;
+    background: #f3f3f3;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.25rem;
+    padding: 0.6rem 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 18rem;
+    overflow: auto;
+}
+.desc {
+    font-size: 0.8rem;
+    color: #0176d3;
+    font-weight: 600;
+}
+.mono {
+    font-family: monospace;
+    font-size: 0.78rem;
+    line-height: 1.7;
+}
+[data-hint='yes'] { color: #2e844a; }
+[data-hint='no']  { color: #ba0517; }
+
+.detail-list {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.2rem 1rem;
+    font-size: 0.85rem;
+}
+.detail-list dt {
+    color: #5c5c5c;
+}
+.detail-list dd {
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.window-box {
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-left: 3px solid #0176d3;
+    border-radius: 0.25rem;
+    background: #f8f9fb;
+    padding: 0.6rem 0.8rem 0.7rem;
+}
+
+/* ------------------------------------------------ convert from Setup */
+
+.conv-body { max-height: 60vh; overflow-y: auto; }
+
+.conv {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    border: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+    border-left: 3px solid #2e844a;
+    border-radius: 0.35rem;
+    padding: 0.7rem 0.85rem;
+    margin-bottom: 0.6rem;
+    background: var(--slds-g-color-neutral-base-100, #fff);
+}
+/* A job that cannot be taken over reads as refused at a glance, and carries
+   its reason on the row rather than hiding it behind a click. */
+.conv_blocked {
+    border-left-color: #ba0517;
+    background: #fdf4f4;
+}
+.conv-main { flex: 1 1 auto; min-width: 0; }
+.conv-pick { flex: 0 0 auto; padding-top: 0.15rem; }
+
+.conv-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+}
+.conv-state {
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #5c5c5c;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.6rem;
+    padding: 0.05rem 0.45rem;
+}
+.conv-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.1rem;
+    font-size: 0.78rem;
+    color: #3e3e3c;
+}
+.conv-facts em {
+    font-style: normal;
+    color: #5c5c5c;
+    margin-right: 0.3rem;
+}
+.conv-facts .mono { font-family: monospace; color: #5c5c5c; }
+
+.conv-why {
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    border-radius: 0.25rem;
+    padding: 0.4rem 0.6rem;
+}
+.conv-why_block {
+    background: #fdecee;
+    color: #8a0a16;
+    font-weight: 600;
+}
+.conv-why_warn {
+    background: #fef5e7;
+    color: #6b3a02;
+}
+.conv-blocked-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #ba0517;
+}
+
+.conv-selected {
+    border: 1px solid #0176d3;
+    border-radius: 0.35rem;
+    padding: 0.85rem 1rem;
+    margin-top: 0.75rem;
+    background: #f8f9fb;
+}
+.conv-testmode {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    background: #fef5e7;
+    border-left: 3px solid #8c4b02;
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.7rem;
+    color: #6b3a02;
+}
+
+.conv-bar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--slds-g-color-border-base-1, #e5e5e5);
+}
+.conv-bulk { font-size: 0.85rem; line-height: 1.5; }
+.conv-results { }
+.conv-res {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    border-radius: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.3rem;
+    border-left: 3px solid #2e844a;
+    background: #ebf7ee;
+}
+.conv-res_bad {
+    border-left-color: #ba0517;
+    background: #fdecee;
+    color: #8a0a16;
+}

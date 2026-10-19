@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_EndDateNotBeforeStartDate</fullName>
+    <active>true</active>
+    <description>A window that ends before it starts can never make the job active, so it is rejected at save time rather than silently never running.</description>
+    <errorConditionFormula>NOT(ISBLANK(AJO_StartDate__c))
+&amp;&amp;  NOT(ISBLANK(AJO_EndDate__c))
+&amp;&amp;  AJO_EndDate__c &lt; AJO_StartDate__c</errorConditionFormula>
+    <errorDisplayField>AJO_EndDate__c</errorDisplayField>
+    <errorMessage>End Date cannot be earlier than Start Date. Leave End Date blank for a job that should run indefinitely.</errorMessage>
+</ValidationRule>

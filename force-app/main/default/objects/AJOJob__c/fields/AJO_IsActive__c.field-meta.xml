@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_IsActive__c</fullName>
+    <description>Derived: true only while the job is enabled and today falls inside the Start Date / End Date window. Mirrors AJOWindow in Apex, so list views, reports and the dispatcher all agree on what &quot;active&quot; means.</description>
+    <formula>AJO_Enabled__c
+&amp;&amp;  ( ISBLANK(AJO_StartDate__c) || AJO_StartDate__c &lt;= TODAY() )
+&amp;&amp;  ( ISBLANK(AJO_EndDate__c)   || TODAY() &lt;= AJO_EndDate__c )</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Active</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

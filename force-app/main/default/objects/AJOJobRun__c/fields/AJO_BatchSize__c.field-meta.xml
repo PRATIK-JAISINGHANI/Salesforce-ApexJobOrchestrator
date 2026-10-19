@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_BatchSize__c</fullName>
+    <description>The scope actually handed to Database.executeBatch for this run, not the value configured on the job. Blank when the run did not start a batch. The two differ whenever a legacy Schedulable picks its own scope, which is why the configured value alone was never enough to explain a run.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Records per batch actually used. Blank when this run started no batch.</inlineHelpText>
+    <label>Records Per Batch</label>
+    <precision>8</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

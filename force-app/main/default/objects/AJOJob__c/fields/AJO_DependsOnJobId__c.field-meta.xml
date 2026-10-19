@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AJO_DependsOnJobId__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Runs only after the referenced job succeeded most recently.</description>
+    <label>Depends On</label>
+    <referenceTo>AJOJob__c</referenceTo>
+    <relationshipLabel>Dependent Jobs</relationshipLabel>
+    <relationshipName>DependentJobs</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

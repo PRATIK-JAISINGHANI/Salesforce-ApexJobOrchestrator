@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomPermission xmlns="http://soap.sforce.com/2006/04/metadata">
+    <isLicensed>false</isLicensed>
+    <label>Administer Apex Job Orchestration</label>
+    <description>Gates the framework-level controls: installing and uninstalling the scheduler, pausing every job, running maintenance by hand, and seeding demo data. Without it the console shows the operating tabs only.</description>
+</CustomPermission>
